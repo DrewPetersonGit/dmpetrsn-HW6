@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskSplit UI Directions</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const TASKS = [
+      { name: "Write Introduction", project: "CS 4800",   due: "Feb 25", effort: "Med",  status: "Overdue" },
+      { name: "Create Slides",      project: "CS 4800",   due: "Mar 1",  effort: "High", status: "To Do" },
+      { name: "Literature Review",  project: "ENGL 2010", due: "Mar 5",  effort: "Low",  status: "To Do" },
+      { name: "Peer Review",        project: "BIOL 3200", due: "Mar 9",  effort: "Low",  status: "To Do" },
+    ];
+    const PROJECTS = [
+      { name: "CS 4800 Final Project", due: "Mar 15", members: 4, tasks: 5, progress: 80 },
+      { name: "ENGL 2010 Group Essay", due: "Mar 8",  members: 3, tasks: 3, progress: 40 },
+    ];
+    const PROJECT_TASKS = [
+      { done: true,  name: "Write Introduction", owner: "Alex",   due: "Feb 25", effort: "Med",  status: "Done" },
+      { done: true,  name: "Data Analysis",      owner: "Jamie",  due: "Mar 1",  effort: "High", status: "Done" },
+      { done: false, name: "Create Slides",      owner: "Jordan", due: "Mar 8",  effort: "High", status: "In Progress" },
+      { done: false, name: "References",         owner: "Casey",  due: "Mar 10", effort: "Low",  status: "To Do" },
+      { done: false, name: "Final Review",       owner: "(all)",  due: "Mar 14", effort: "Low",  status: "To Do" },
+    ];
+    const NOTIFS = [
+      { type: "overdue", title: "Write Introduction is overdue", detail: "CS 4800  ·  Owner: Alex  ·  Due Feb 25" },
+      { type: "assign",  title: "New task assigned to you",      detail: "ENGL 2010  ·  Peer Review  ·  Due Mar 5" },
+      { type: "done",    title: "Task completed: Data Analysis", detail: "CS 4800  ·  Completed by Jamie" },
+    ];
+    const SCREENS = ["Dashboard", "Project Detail", "Task Edit", "Notifications"];
+    const NAV_ITEMS = ["Dashboard","Projects","My Tasks","Notifications","Profile"];
+
+    // ── Shared helpers ────────────────────────────────────────
+    function Badge({ status, variant }) {
+      const map = {
+        A: {
+          Overdue:      "text-red-600 bg-red-50 px-1.5 py-0.5 rounded text-xs",
+          Done:         "text-green-700 bg-green-50 px-1.5 py-0.5 rounded text-xs",
+          "In Progress":"text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-xs",
+          "To Do":      "text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded text-xs",
+        },
+        B: {
+          Overdue:      "px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-400",
+          Done:         "px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400",
+          "In Progress":"px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400",
+          "To Do":      "px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-700 text-gray-400",
+        },
+        C: {
+          Overdue:      "px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600",
+          Done:         "px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700",
+          "In Progress":"px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-600",
+          "To Do":      "px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500",
+        },
+      };
+      return <span className={map[variant][status] || "text-xs text-gray-500"}>{status}</span>;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // OPTION A
+    // ════════════════════════════════════════════════════════
+    function OptionA({ screen }) {
+      const nav = (
+        <nav className="flex items-center gap-6 px-6 h-11 border-b border-gray-200 bg-white sticky top-0 z-10">
+          <span className="font-semibold text-gray-900 text-base tracking-tight mr-4">TaskSplit</span>
+          {NAV_ITEMS.map(l => (
+            <span key={l} className={screen==="Dashboard"&&l==="Dashboard"||screen==="Project Detail"&&l==="Projects"||screen==="Task Edit"&&l==="Projects"||screen==="Notifications"&&l==="Notifications"
+              ? "text-gray-900 text-xs font-semibold border-b-2 border-gray-900 pb-0.5 cursor-pointer"
+              : "text-gray-500 text-xs font-medium cursor-pointer"}>{l}</span>
+          ))}
+          <span className="ml-auto text-xs text-gray-400 cursor-pointer">Logout</span>
+        </nav>
+      );
+
+      if (screen === "Dashboard") return (
+        <div className="bg-white min-h-screen font-sans text-sm text-gray-800">
+          {nav}
+          <div className="max-w-4xl mx-auto px-6 py-8">
+            <p className="text-lg font-semibold text-gray-900 mb-5">Welcome back, [User Name]</p>
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">My Tasks</p>
+              <div className="border border-gray-200 rounded-sm bg-white">
+                <div className="grid grid-cols-5 text-xs font-medium text-gray-400 border-b border-gray-100 px-3 py-2">
+                  {["Task","Project","Due","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+                </div>
+                {TASKS.map((r,i)=>(
+                  <div key={i} className="grid grid-cols-5 text-xs px-3 py-2.5 border-b border-gray-50 hover:bg-gray-50">
+                    <span className="text-gray-800">{r.name}</span>
+                    <span className="text-gray-500">{r.project}</span>
+                    <span className="text-gray-500">{r.due}</span>
+                    <span className="text-gray-500">{r.effort}</span>
+                    <Badge status={r.status} variant="A"/>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">My Projects</p>
+                <button className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-sm">+ New Project</button>
+              </div>
+              <div className="border border-gray-200 rounded-sm">
+                <div className="grid grid-cols-4 text-xs font-medium text-gray-400 border-b border-gray-100 px-3 py-2">
+                  {["Project","Due","Members","Progress"].map(h=><span key={h}>{h}</span>)}
+                </div>
+                {PROJECTS.map((r,i)=>(
+                  <div key={i} className="grid grid-cols-4 text-xs px-3 py-2.5 border-b border-gray-50 items-center">
+                    <span className="text-gray-800">{r.name}</span>
+                    <span className="text-gray-500">{r.due}</span>
+                    <span className="text-gray-500">{r.members}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-gray-100 rounded-full"><div className="h-1 bg-gray-800 rounded-full" style={{width:`${r.progress}%`}}/></div>
+                      <span className="text-gray-400">{r.progress}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Project Detail") return (
+        <div className="bg-white min-h-screen font-sans text-sm text-gray-800">
+          {nav}
+          <div className="max-w-4xl mx-auto px-6 py-8">
+            <p className="text-xs text-gray-400 mb-3 cursor-pointer">← Projects</p>
+            <div className="flex items-start justify-between mb-1">
+              <p className="text-lg font-semibold text-gray-900">CS 4800 Final Project</p>
+              <button className="px-3 py-1.5 text-xs font-medium border border-gray-200 text-gray-600 rounded-sm">+ Invite Members</button>
+            </div>
+            <p className="text-xs text-gray-400 mb-6">Due Mar 15, 2026 · 4 members · 5 tasks</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Tasks</p>
+              <button className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-sm">+ Add Task</button>
+            </div>
+            <div className="border border-gray-200 rounded-sm">
+              <div className="grid text-xs font-medium text-gray-400 border-b border-gray-100 px-3 py-2" style={{gridTemplateColumns:"24px 2fr 1fr 1fr 1fr 1fr"}}>
+                {["","Task","Owner","Deadline","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+              </div>
+              {PROJECT_TASKS.map((r,i)=>(
+                <div key={i} className="grid text-xs px-3 py-2.5 border-b border-gray-50 hover:bg-gray-50 items-center" style={{gridTemplateColumns:"24px 2fr 1fr 1fr 1fr 1fr"}}>
+                  <span className={r.done?"text-gray-400":"text-gray-300"}>{r.done?"✓":"○"}</span>
+                  <span className={r.done?"text-gray-400 line-through":"text-gray-800"}>{r.name}</span>
+                  <span className="text-gray-500">{r.owner}</span>
+                  <span className="text-gray-500">{r.due}</span>
+                  <span className="text-gray-500">{r.effort}</span>
+                  <Badge status={r.status} variant="A"/>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Task Edit") return (
+        <div className="bg-white min-h-screen font-sans text-sm text-gray-800">
+          {nav}
+          <div className="max-w-4xl mx-auto px-6 py-8">
+            <p className="text-xs text-gray-400 mb-5 cursor-pointer">← CS 4800 Final Project</p>
+            <p className="text-lg font-semibold text-gray-900 mb-5">Edit Task</p>
+            <div className="max-w-md space-y-4">
+              {[["Task Name *","Create Slides",false],["Assigned To *","Jordan ▼",false],["Deadline *","03/08/2026",false],["Date Added","01/20/2026",true],["Last Modified","02/10/2026",true]].map(([l,v,ro])=>(
+                <div key={l}>
+                  <label className="text-xs text-gray-500 mb-1 block">{l}</label>
+                  <input className="w-full border border-gray-200 rounded-sm px-2.5 py-1.5 text-sm" defaultValue={v} readOnly={ro} style={ro?{background:"#f9fafb",color:"#9ca3af"}:{}}/>
+                </div>
+              ))}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Effort Level *</label>
+                <div className="flex gap-4">
+                  {["Low","Medium","High"].map(o=>(
+                    <label key={o} className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                      <input type="radio" name="effortA" defaultChecked={o==="High"}/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Status</label>
+                <div className="flex gap-4">
+                  {["To Do","In Progress","Done"].map(o=>(
+                    <label key={o} className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                      <input type="radio" name="statusA" defaultChecked={o==="In Progress"}/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button className="px-3 py-1.5 text-xs font-medium border border-red-200 text-red-600 rounded-sm">Delete Task</button>
+                <button className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-sm">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="bg-white min-h-screen font-sans text-sm text-gray-800">
+          {nav}
+          <div className="max-w-4xl mx-auto px-6 py-8">
+            <p className="text-lg font-semibold text-gray-900 mb-5">Notifications</p>
+            <div className="space-y-1">
+              {NOTIFS.map((n,i)=>(
+                <div key={i} className="flex items-start gap-3 px-3 py-3 border border-gray-100 hover:bg-gray-50 rounded-sm">
+                  <span className={`mt-0.5 text-xs font-bold ${n.type==="overdue"?"text-red-500":n.type==="done"?"text-green-500":"text-blue-500"}`}>{n.type==="overdue"?"!":n.type==="done"?"✓":">"}</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-800">{n.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{n.detail}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 underline cursor-pointer whitespace-nowrap">View Project</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════
+    // OPTION B
+    // ════════════════════════════════════════════════════════
+    function OptionB({ screen }) {
+      const activeFor = (l) => (screen==="Dashboard"&&l==="Dashboard")||(screen==="Project Detail"&&l==="Projects")||(screen==="Task Edit"&&l==="Projects")||(screen==="Notifications"&&l==="Notifications");
+      const nav = (
+        <nav className="flex items-center gap-1 px-6 h-14 bg-gray-950 sticky top-0 z-10">
+          <span className="font-bold text-white text-base tracking-tight mr-6">TaskSplit</span>
+          {NAV_ITEMS.map(l=>(
+            <span key={l} className={activeFor(l)?"px-3 py-1.5 text-white text-xs font-semibold bg-gray-800 rounded cursor-pointer":"px-3 py-1.5 text-gray-400 text-xs font-medium rounded cursor-pointer"}>{l}</span>
+          ))}
+          <span className="ml-auto text-xs text-gray-500 cursor-pointer">Logout</span>
+        </nav>
+      );
+
+      if (screen === "Dashboard") return (
+        <div className="min-h-screen bg-gray-950 font-sans text-sm">
+          {nav}
+          <div className="max-w-5xl mx-auto px-8 py-10">
+            <p className="text-2xl font-bold text-white mb-6 tracking-tight">Welcome back, [User Name]</p>
+            <div className="mb-10">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">My Tasks</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                <div className="grid grid-cols-5 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800 px-4 py-3">
+                  {["Task","Project","Due","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+                </div>
+                {TASKS.map((r,i)=>(
+                  <div key={i} className="grid grid-cols-5 text-sm px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 items-center">
+                    <span className="text-white font-medium">{r.name}</span>
+                    <span className="text-gray-400">{r.project}</span>
+                    <span className="text-gray-400">{r.due}</span>
+                    <span className="text-gray-400">{r.effort}</span>
+                    <Badge status={r.status} variant="B"/>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">My Projects</p>
+                <button className="px-4 py-2 text-xs font-bold bg-blue-500 text-white rounded-lg">+ New Project</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {PROJECTS.map((r,i)=>(
+                  <div key={i} className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+                    <p className="text-white font-semibold mb-1">{r.name}</p>
+                    <p className="text-gray-500 text-xs mb-4">Due {r.due} · {r.members} members</p>
+                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mb-1">
+                      <div className="h-1.5 bg-blue-500 rounded-full" style={{width:`${r.progress}%`}}/>
+                    </div>
+                    <p className="text-xs text-gray-500">{r.progress}% complete</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Project Detail") return (
+        <div className="min-h-screen bg-gray-950 font-sans text-sm">
+          {nav}
+          <div className="max-w-5xl mx-auto px-8 py-10">
+            <p className="text-xs text-gray-500 mb-4 cursor-pointer">← Projects</p>
+            <div className="flex items-start justify-between mb-1">
+              <p className="text-2xl font-bold text-white tracking-tight">CS 4800 Final Project</p>
+              <button className="px-4 py-2 text-xs font-bold border border-gray-700 text-gray-300 rounded-lg">+ Invite Members</button>
+            </div>
+            <p className="text-gray-500 text-sm mb-8">Due Mar 15, 2026 · 4 members · 5 tasks</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tasks</p>
+              <button className="px-4 py-2 text-xs font-bold bg-blue-500 text-white rounded-lg">+ Add Task</button>
+            </div>
+            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+              <div className="grid text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800 px-4 py-3" style={{gridTemplateColumns:"28px 2fr 1fr 1fr 1fr 1fr"}}>
+                {["","Task","Owner","Deadline","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+              </div>
+              {PROJECT_TASKS.map((r,i)=>(
+                <div key={i} className="grid text-sm px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 items-center" style={{gridTemplateColumns:"28px 2fr 1fr 1fr 1fr 1fr"}}>
+                  <span className={r.done?"text-emerald-400 font-bold":"text-gray-600"}>{r.done?"✓":"○"}</span>
+                  <span className={r.done?"text-gray-500 line-through":"text-white font-medium"}>{r.name}</span>
+                  <span className="text-gray-400">{r.owner}</span>
+                  <span className="text-gray-400">{r.due}</span>
+                  <span className="text-gray-400">{r.effort}</span>
+                  <Badge status={r.status} variant="B"/>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Task Edit") return (
+        <div className="min-h-screen bg-gray-950 font-sans text-sm">
+          {nav}
+          <div className="max-w-5xl mx-auto px-8 py-10">
+            <p className="text-xs text-gray-500 mb-6 cursor-pointer">← CS 4800 Final Project</p>
+            <p className="text-2xl font-bold text-white mb-6 tracking-tight">Edit Task</p>
+            <div className="max-w-lg space-y-5">
+              {[["Task Name *","Create Slides",false],["Assigned To *","Jordan ▼",false],["Deadline *","03/08/2026",false],["Date Added","01/20/2026",true],["Last Modified","02/10/2026",true]].map(([l,v,ro])=>(
+                <div key={l}>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">{l}</label>
+                  <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white" defaultValue={v} readOnly={ro} style={ro?{opacity:0.5}:{}}/>
+                </div>
+              ))}
+              <div>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Effort Level *</label>
+                <div className="flex gap-3">
+                  {["Low","Medium","High"].map(o=>(
+                    <label key={o} className={`flex-1 flex items-center justify-center py-2 rounded-lg border cursor-pointer text-sm font-medium ${o==="High"?"border-blue-500 bg-blue-500/10 text-blue-400":"border-gray-700 text-gray-500"}`}>
+                      <input type="radio" name="effortB" defaultChecked={o==="High"} className="hidden"/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Status</label>
+                <div className="flex gap-3">
+                  {["To Do","In Progress","Done"].map(o=>(
+                    <label key={o} className={`flex-1 flex items-center justify-center py-2 rounded-lg border cursor-pointer text-sm font-medium ${o==="In Progress"?"border-blue-500 bg-blue-500/10 text-blue-400":"border-gray-700 text-gray-500"}`}>
+                      <input type="radio" name="statusB" defaultChecked={o==="In Progress"} className="hidden"/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button className="px-4 py-2 text-xs font-bold border border-red-800 text-red-500 rounded-lg">Delete Task</button>
+                <button className="px-4 py-2 text-xs font-bold bg-blue-500 text-white rounded-lg">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-gray-950 font-sans text-sm">
+          {nav}
+          <div className="max-w-5xl mx-auto px-8 py-10">
+            <p className="text-2xl font-bold text-white mb-6 tracking-tight">Notifications</p>
+            <div className="space-y-2">
+              {NOTIFS.map((n,i)=>(
+                <div key={i} className={`flex items-start gap-4 px-5 py-4 rounded-lg border ${n.type==="overdue"?"border-red-800/50 bg-red-500/5":"border-gray-800 bg-gray-900"}`}>
+                  <span className={`text-lg font-black mt-0.5 ${n.type==="overdue"?"text-red-500":n.type==="done"?"text-emerald-400":"text-blue-400"}`}>{n.type==="overdue"?"!":n.type==="done"?"✓":">"}</span>
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">{n.title}</p>
+                    <p className="text-gray-500 text-xs mt-1">{n.detail}</p>
+                  </div>
+                  <span className="text-xs text-blue-400 cursor-pointer font-medium whitespace-nowrap mt-0.5">View →</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════
+    // OPTION C
+    // ════════════════════════════════════════════════════════
+    function OptionC({ screen }) {
+      const activeFor = (l) => (screen==="Dashboard"&&l==="Dashboard")||(screen==="Project Detail"&&l==="Projects")||(screen==="Task Edit"&&l==="Projects")||(screen==="Notifications"&&l==="Notifications");
+      const nav = (
+        <nav className="flex items-center gap-2 px-8 h-16 bg-white border-b-2 border-amber-100 sticky top-0 z-10">
+          <span className="font-bold text-orange-600 text-lg mr-6">✦ TaskSplit</span>
+          {NAV_ITEMS.map(l=>(
+            <span key={l} className={activeFor(l)?"px-4 py-2 text-orange-600 text-sm font-semibold bg-orange-50 rounded-full cursor-pointer":"px-4 py-2 text-gray-500 text-sm font-medium rounded-full cursor-pointer"}>{l}</span>
+          ))}
+          <span className="ml-auto text-sm text-gray-400 cursor-pointer">Logout</span>
+        </nav>
+      );
+
+      if (screen === "Dashboard") return (
+        <div className="min-h-screen bg-amber-50 font-sans text-sm">
+          {nav}
+          <div className="max-w-4xl mx-auto px-8 py-10">
+            <p className="text-2xl font-bold text-gray-800 mb-6">👋 Welcome back, [User Name]</p>
+            <div className="mb-10">
+              <p className="text-sm font-bold text-gray-600 mb-4">My Tasks</p>
+              <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
+                <div className="grid grid-cols-5 text-xs font-bold text-gray-400 bg-amber-50/60 border-b border-amber-100 px-5 py-3">
+                  {["Task","Project","Due","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+                </div>
+                {TASKS.map((r,i)=>(
+                  <div key={i} className="grid grid-cols-5 text-sm px-5 py-3.5 border-b border-amber-50 hover:bg-orange-50/30 items-center">
+                    <span className="text-gray-800 font-medium">{r.name}</span>
+                    <span className="text-gray-500">{r.project}</span>
+                    <span className="text-gray-500">{r.due}</span>
+                    <span className="text-gray-500">{r.effort}</span>
+                    <Badge status={r.status} variant="C"/>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-gray-600">My Projects</p>
+                <button className="px-5 py-2.5 text-sm font-semibold bg-orange-500 text-white rounded-full shadow-sm">+ New Project</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {PROJECTS.map((r,i)=>(
+                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-amber-100 p-6">
+                    <p className="text-gray-800 font-bold text-base mb-1">{r.name}</p>
+                    <p className="text-gray-400 text-xs mb-5">Due {r.due} · {r.members} members</p>
+                    <div className="h-2.5 bg-amber-100 rounded-full overflow-hidden mb-2">
+                      <div className="h-2.5 bg-orange-400 rounded-full" style={{width:`${r.progress}%`}}/>
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">{r.progress}% complete</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Project Detail") return (
+        <div className="min-h-screen bg-amber-50 font-sans text-sm">
+          {nav}
+          <div className="max-w-4xl mx-auto px-8 py-10">
+            <p className="text-sm text-orange-500 mb-4 cursor-pointer font-medium">← Back to Projects</p>
+            <div className="flex items-start justify-between mb-1">
+              <p className="text-2xl font-bold text-gray-800">CS 4800 Final Project</p>
+              <button className="px-5 py-2.5 text-sm font-semibold border-2 border-orange-200 text-orange-600 rounded-full">+ Invite Members</button>
+            </div>
+            <p className="text-gray-400 text-sm mb-8">Due Mar 15, 2026 · 4 members · 5 tasks</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold text-gray-600">Tasks</p>
+              <button className="px-5 py-2.5 text-sm font-semibold bg-orange-500 text-white rounded-full shadow-sm">+ Add Task</button>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
+              <div className="grid text-xs font-bold text-gray-400 bg-amber-50/60 border-b border-amber-100 px-5 py-3" style={{gridTemplateColumns:"28px 2fr 1fr 1fr 1fr 1fr"}}>
+                {["","Task","Owner","Deadline","Effort","Status"].map(h=><span key={h}>{h}</span>)}
+              </div>
+              {PROJECT_TASKS.map((r,i)=>(
+                <div key={i} className="grid text-sm px-5 py-3.5 border-b border-amber-50 items-center" style={{gridTemplateColumns:"28px 2fr 1fr 1fr 1fr 1fr"}}>
+                  <span className={r.done?"text-green-500 font-bold":"text-amber-300"}>{r.done?"✓":"○"}</span>
+                  <span className={r.done?"text-gray-400 line-through":"text-gray-800 font-medium"}>{r.name}</span>
+                  <span className="text-gray-500">{r.owner}</span>
+                  <span className="text-gray-500">{r.due}</span>
+                  <span className="text-gray-500">{r.effort}</span>
+                  <Badge status={r.status} variant="C"/>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+      if (screen === "Task Edit") return (
+        <div className="min-h-screen bg-amber-50 font-sans text-sm">
+          {nav}
+          <div className="max-w-4xl mx-auto px-8 py-10">
+            <p className="text-sm text-orange-500 mb-6 cursor-pointer font-medium">← CS 4800 Final Project</p>
+            <p className="text-2xl font-bold text-gray-800 mb-6">✏️ Edit Task</p>
+            <div className="max-w-lg space-y-5">
+              {[["Task Name *","Create Slides",false],["Assigned To *","Jordan ▼",false],["Deadline *","03/08/2026",false],["Date Added","01/20/2026",true],["Last Modified","02/10/2026",true]].map(([l,v,ro])=>(
+                <div key={l}>
+                  <label className="text-sm font-semibold text-gray-600 mb-1.5 block">{l}</label>
+                  <input className="w-full bg-amber-50 border-2 border-amber-100 rounded-xl px-4 py-2.5 text-sm" defaultValue={v} readOnly={ro} style={ro?{opacity:0.6}:{}}/>
+                </div>
+              ))}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1.5 block">Effort Level *</label>
+                <div className="flex gap-3">
+                  {["Low","Medium","High"].map(o=>(
+                    <label key={o} className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border-2 cursor-pointer text-sm font-semibold ${o==="High"?"border-orange-400 bg-orange-50 text-orange-600":"border-amber-100 text-gray-500 bg-white"}`}>
+                      <input type="radio" name="effortC" defaultChecked={o==="High"} className="hidden"/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1.5 block">Status</label>
+                <div className="flex gap-3">
+                  {["To Do","In Progress","Done"].map(o=>(
+                    <label key={o} className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border-2 cursor-pointer text-sm font-semibold ${o==="In Progress"?"border-orange-400 bg-orange-50 text-orange-600":"border-amber-100 text-gray-500 bg-white"}`}>
+                      <input type="radio" name="statusC" defaultChecked={o==="In Progress"} className="hidden"/> {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button className="px-5 py-2.5 text-sm font-semibold border-2 border-red-200 text-red-500 rounded-full">Delete Task</button>
+                <button className="px-5 py-2.5 text-sm font-semibold bg-orange-500 text-white rounded-full shadow-sm">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-amber-50 font-sans text-sm">
+          {nav}
+          <div className="max-w-4xl mx-auto px-8 py-10">
+            <p className="text-2xl font-bold text-gray-800 mb-6">🔔 Notifications</p>
+            <div className="space-y-3">
+              {NOTIFS.map((n,i)=>(
+                <div key={i} className={`flex items-start gap-4 px-6 py-4 rounded-2xl border-2 bg-white ${n.type==="overdue"?"border-red-100":"border-amber-100"}`}>
+                  <span className="text-xl mt-0.5">{n.type==="overdue"?"⚠️":n.type==="done"?"✅":"📋"}</span>
+                  <div className="flex-1">
+                    <p className="text-gray-800 font-semibold">{n.title}</p>
+                    <p className="text-gray-400 text-xs mt-1">{n.detail}</p>
+                  </div>
+                  <span className="text-sm text-orange-500 font-semibold cursor-pointer whitespace-nowrap mt-0.5">View →</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Root
+    // ════════════════════════════════════════════════════════
+    const OPTIONS = [
+      { id:"A", label:"Option A", sub:"Clean & Minimal", color:"bg-gray-900",
+        intent:["Typography and whitespace carry the visual weight — no decorative flourishes","High information density with tight spacing; built for daily power users","Single near-black accent keeps focus on task content, not chrome","Thin borders and subtle hover states reduce visual noise","Badge system communicates status at a glance without interrupting scan flow","Inspired by tools like Linear and Notion — feels fast and professional","Best for: power users, students comfortable with productivity software"] },
+      { id:"B", label:"Option B", sub:"Bold & High-Contrast", color:"bg-blue-600",
+        intent:["Dark background pushes content forward and reduces eye strain in long sessions","Electric blue accent creates a clear, consistent focal hierarchy","Card-based project layout adds spatial orientation for parallel workstreams","Pill-shaped toggle selectors make state feel interactive and immediate","Strong typographic scale establishes clear section hierarchy quickly","Overdue alerts use warm red-tinted cards — urgency is unmistakable","Best for: users who respond to strong visual feedback and prefer a modern app feel"] },
+      { id:"C", label:"Option C", sub:"Friendly & Approachable", color:"bg-orange-500",
+        intent:["Warm amber/orange palette signals energy and collaboration without aggression","Generous padding and rounded-2xl corners soften the interface","Emoji accents on headings add personality and make sections feel less institutional","Pill navigation feels casual and non-intimidating","Progress bars use a warm orange fill — completing work feels rewarding, not clinical","Notification cards use emoji icons that communicate tone instantly","Best for: first-time users, students new to project management tools"] },
+    ];
+
+    function App() {
+      const [option, setOption] = useState("A");
+      const [screen, setScreen] = useState("Dashboard");
+      const current = OPTIONS.find(o => o.id === option);
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+            <div className="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
+              <span className="font-bold text-gray-900 text-sm">TaskSplit UI Directions</span>
+              <div className="flex gap-1 bg-gray-100 rounded-full p-1">
+                {OPTIONS.map(o=>(
+                  <button key={o.id} onClick={()=>setOption(o.id)}
+                    className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${option===o.id?o.color+" text-white":"text-gray-500 hover:text-gray-900"}`}>
+                    {o.label}: {o.sub}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 ml-auto bg-gray-100 rounded-full p-1">
+                {SCREENS.map(s=>(
+                  <button key={s} onClick={()=>setScreen(s)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${screen===s?"bg-white text-gray-900 shadow-sm":"text-gray-500 hover:text-gray-700"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="rounded-xl overflow-hidden shadow-lg border border-gray-200">
+              {option==="A" && <OptionA screen={screen}/>}
+              {option==="B" && <OptionB screen={screen}/>}
+              {option==="C" && <OptionC screen={screen}/>}
+            </div>
+            <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="font-bold text-gray-900 mb-3">{current.label}: {current.sub} — Design Intent</h3>
+              <ul className="space-y-2">
+                {current.intent.map((pt,i)=>(
+                  <li key={i} className="flex gap-2 text-sm text-gray-600">
+                    <span className="text-gray-300 mt-0.5">–</span><span>{pt}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
